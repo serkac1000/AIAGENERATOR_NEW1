@@ -155,7 +155,19 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
         "Uuid": generateUuid(),
         "Hint": "Enter search query",
         "Text": searchPrompt || "",
-        "Width": "-1100"
+        "Width": "-1100",
+        "Height": "-2",
+        "Column": 0,
+        "Row": 0,
+        "BackgroundColor": "&H00000000",
+        "Enabled": true,
+        "FontBold": false,
+        "FontItalic": false,
+        "FontSize": 14,
+        "FontTypeface": "0",
+        "TextAlignment": "0",
+        "TextColor": "&HFF000000",
+        "Visible": true
       },
       {
         "$Name": "SearchButton",
@@ -165,13 +177,35 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
         "Text": "Search",
         "BackgroundColor": "&HFF4CAF50",
         "TextColor": "&HFFFFFFFF",
-        "Width": "-1100"
+        "Width": "-1100",
+        "Height": "-2",
+        "Column": 0,
+        "Row": 1,
+        "Enabled": true,
+        "FontBold": false,
+        "FontItalic": false,
+        "FontSize": 14,
+        "FontTypeface": "0",
+        "Image": "",
+        "Shape": "0",
+        "ShowFeedback": true,
+        "TextAlignment": "1",
+        "Visible": true
       },
       {
         "$Name": "Web1",
         "$Type": "Web",
         "$Version": "6",
-        "Uuid": generateUuid()
+        "Uuid": generateUuid(),
+        "AllowCookies": false,
+        "AllowJavaScript": false,
+        "Height": "-2",
+        "PromptforPermission": true,
+        "SaveUrl": "",
+        "Url": "",
+        "UsesLocation": false,
+        "Visible": false,
+        "Width": "-2"
       }
     ];
 
@@ -182,7 +216,23 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
         "$Version": "8",
         "Uuid": generateUuid(),
         "Width": "-1100",
-        "Height": "-1050"
+        "Height": "-1050",
+        "Column": 0,
+        "Row": 2,
+        "BackgroundColor": "&H00000000",
+        "Elements": [],
+        "ElementsFromString": "",
+        "FontBold": false,
+        "FontItalic": false,
+        "FontSize": 22,
+        "FontTypeface": "0",
+        "ListData": "",
+        "Selection": "",
+        "SelectionColor": "&HFF33B5E5",
+        "ShowFilterBar": false,
+        "TextColor": "&HFF000000",
+        "TextSize": 22,
+        "Visible": true
       });
     } else {
       components.push({
@@ -194,7 +244,17 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
         "FontSize": "16",
         "TextAlignment": "1",
         "Width": "-1100",
-        "Height": "-1050"
+        "Height": "-1050",
+        "Column": 0,
+        "Row": 2,
+        "BackgroundColor": "&H00000000",
+        "FontBold": false,
+        "FontItalic": false,
+        "FontTypeface": "0",
+        "HasMargins": true,
+        "HTMLFormat": false,
+        "TextColor": "&HFF000000",
+        "Visible": true
       });
     }
 
@@ -213,20 +273,35 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
           "Text": "Play Sound",
           "BackgroundColor": "&HFFF44336",
           "TextColor": "&HFFFFFFFF",
-          "Width": "-1100"
+          "Width": "-1100",
+          "Height": "-2",
+          "Column": 0,
+          "Row": 3,
+          "Enabled": true,
+          "FontBold": false,
+          "FontItalic": false,
+          "FontSize": 14,
+          "FontTypeface": "0",
+          "Image": "",
+          "Shape": "0",
+          "ShowFeedback": true,
+          "TextAlignment": "1",
+          "Visible": true
         },
         {
           "$Name": "Sound1",
           "$Type": "Sound",  
           "$Version": "6",
           "Uuid": generateUuid(),
-          "Source": soundFile
+          "Source": soundFile,
+          "MinimumInterval": 500,
+          "Volume": 50
         }
       );
     }
 
     const screenScm = {
-      "authURL": ["ai2.appinventor.mit.edu"],
+      "authURL": ["https://ai2.appinventor.mit.edu"],
       "YaVersion": "232",
       "Source": "Form",
       "Properties": {
@@ -238,6 +313,16 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
         "Title": `${projectName} Search`,
         "Uuid": "0",
         "Sizing": "Responsive",
+        "BackgroundColor": "&HFFFFFFFF",
+        "CloseScreenAnimation": "Default",
+        "OpenScreenAnimation": "Default",
+        "ScreenOrientation": "Portrait",
+        "Scrollable": false,
+        "ShowListsAsJson": true,
+        "ShowStatusBar": true,
+        "TitleVisible": true,
+        "VersionCode": 1,
+        "VersionName": "1.0",
         "$Components": components
       }
     };
@@ -255,11 +340,11 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
     <field name="component_id">SearchButton</field>
     <field name="event_name">Click</field>
     <statement name="DO">
-      <block type="component_method">
-        <mutation component_type="Web" method_name="Url" number_of_parameters="1"></mutation>
+      <block type="component_set_get_property">
+        <mutation component_type="Web" property_name="Url"></mutation>
         <field name="component_id">Web1</field>
-        <field name="method_name">Url</field>
-        <value name="arg0">
+        <field name="property_name">Url</field>
+        <value name="VALUE">
           <block type="text_join">
             <mutation items="4"></mutation>
             <value name="ADD0">
