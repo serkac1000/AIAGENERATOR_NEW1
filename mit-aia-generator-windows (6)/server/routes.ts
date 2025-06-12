@@ -9,8 +9,15 @@ const router = Router();
 
 // Zod schema for validation
 const generateSchema = z.object({
+  projectName: z.string().min(1, "Project name is required"),
   searchPrompt: z.string().min(1, "Search prompt is required"),
-  appName: z.string().min(1, "App name is required").default("aigen1"),
+  apiKey: z.string().min(1, "API key is required"),
+  cseId: z.string().min(1, "CSE ID is required"),
+  userId: z.string().min(1, "User ID is required"),
+  requirements: z.string().optional(),
+  extensions: z.array(z.string()).default([]),
+  saveConfig: z.boolean().default(false),
+  validateStrict: z.boolean().default(true),
 });
 
 // Function to generate .aia file
@@ -188,9 +195,10 @@ $JSON
 export async function registerRoutes(app: express.Express) {
   router.post("/api/generate", async (req: Request, res: Response) => {
     try {
-      const { searchPrompt, appName } = generateSchema.parse(req.body);
-      const aiaPath = generateAiaFile(searchPrompt, appName);
-      res.download(aiaPath, `${appName}.aia`, (err) => {
+      const validatedData = generateSchema.parse(req.body);
+      const { searchPrompt, projectName } = validatedData;
+      const aiaPath = generateAiaFile(searchPrompt, projectName);
+      res.download(aiaPath, `${projectName}.aia`, (err) => {
         if (err) {
           res.status(500).json({ message: "Failed to send .aia file" });
         }
