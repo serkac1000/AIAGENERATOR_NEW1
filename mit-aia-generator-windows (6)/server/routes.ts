@@ -1,4 +1,3 @@
-# Updating the Screen1.scm generation to use projectName instead of appName for AppName and Title.
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import * as admZip from "adm-zip";
@@ -666,8 +665,8 @@ $JSON
     "$Type": "Form",
     "$Version": "31",
     "ActionBar": true,
-    "AppName": "${projectName}",
-    "Title": "${projectName} Search",
+    "AppName": "${appName}",
+    "Title": "${appName} Search",
     "Uuid": "0",
     "$Components": [
       {
