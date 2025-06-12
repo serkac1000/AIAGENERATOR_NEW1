@@ -1,0 +1,102 @@
+Thu Jun 12 15:53:45 GMT+300 2025 com.google.appinventor.client.editor.ProjectEditor
+INFO: ProjectEditor: changeProjectSettingsProperty: ActionBar False => True
+ode-0.js:4090 Thu Jun 12 15:53:45 GMT+300 2025 com.google.appinventor.client.Ode
+SEVERE: Unexpected exception
+java.lang.ClassCastException
+	at Unknown.vA(ode-0.js@48:497)
+	at Unknown.yA(ode-0.js@19:500)
+	at Unknown.new Mac(ode-0.js@20:3141)
+	at Unknown.Z1d(ode-0.js@34:5651)
+	at Unknown.SAc(ode-0.js@19:21)
+	at Unknown.znb(ode-0.js@131:1838)
+	at Unknown.z1(ode-0.js@646:1331)
+	at Unknown.K1(ode-0.js@49:1342)
+	at Unknown.t2(ode-0.js@214:1359)
+	at Unknown.V1(ode-0.js@649:1354)
+	at Unknown.p2(ode-0.js@348:1357)
+	at Unknown.s2(ode-0.js@41:1359)
+	at Unknown.iVb(ode-0.js@204:2669)
+	at Unknown.lVb(ode-0.js@42:2671)
+	at Unknown.Bud(ode-0.js@612:4599)
+	at Unknown.ivc(ode-0.js@81:3833)
+	at Unknown.xvc(ode-0.js@68:3845)
+	at Unknown.eval(ode-0.js@65:5051)
+	at Unknown.kjc(ode-0.js@30:3420)
+	at Unknown.njc(ode-0.js@60:3423)
+	at Unknown.eval(ode-0.js@48:3422)
+
+Xhd @ ode-0.js:4090
+j0d @ ode-0.js:5573
+i0d @ ode-0.js:5572
+p0d @ ode-0.js:5579
+ar @ ode-0.js:320
+sjc @ ode-0.js:3427
+njc @ ode-0.js:3423
+eval @ ode-0.js:3422
+XMLHttpRequest.send
+qvc @ ode-0.js:3838
+uPb @ ode-0.js:2467
+wud @ ode-0.js:4595
+KWb @ ode-0.js:2698
+RTb @ ode-0.js:2630
+G1 @ ode-0.js:1338
+I2 @ ode-0.js:1369
+V2 @ ode-0.js:1382
+l3 @ ode-0.js:1392
+d @ ode-0.js:10
+Promise.then
+wy @ ode-0.js:420
+by @ ode-0.js:402
+lo @ ode-0.js:225
+Yq @ ode-0.js:318
+Ejb @ ode-0.js:1787
+Mjb @ ode-0.js:1795
+AUb @ ode-0.js:2651
+DUb @ ode-0.js:2653
+Bud @ ode-0.js:4599
+ivc @ ode-0.js:3833
+xvc @ ode-0.js:3845
+eval @ ode-0.js:5051
+kjc @ ode-0.js:3420
+njc @ ode-0.js:3423
+eval @ ode-0.js:3422
+XMLHttpRequest.send
+qvc @ ode-0.js:3838
+uPb @ ode-0.js:2467
+wud @ ode-0.js:4595
+FWb @ ode-0.js:2693
+MTb @ ode-0.js:2625
+Ijb @ ode-0.js:1791
+lo @ ode-0.js:225
+SIb @ ode-3.js:534
+UIb @ ode-3.js:536
+ezb @ ode-0.js:1959
+Ozd @ ode-0.js:4758
+Qzd @ ode-0.js:4760
+Wuc @ ode-0.js:3820
+Nuc @ ode-0.js:3813
+Sb @ ode-0.js:80
+Mzd @ ode-0.js:4758
+Rjc @ ode-0.js:3450
+Ijc @ ode-0.js:3441
+Ujc @ ode-0.js:3454
+Pjc @ ode-0.js:3448
+kjc @ ode-0.js:3420
+njc @ ode-0.js:3423
+eval @ ode-0.js:3422
+d @ ode-0.js:3451
+setTimeout
+Sjc @ ode-0.js:3452
+Kjc @ ode-0.js:3443
+Mjc @ ode-0.js:3445
+Kzd @ ode-0.js:4757
+eval @ ode-0.js:4961
+kjc @ ode-0.js:3420
+njc @ ode-0.js:3423
+eval @ ode-0.js:3422
+ode-0.js:4090 Thu Jun 12 15:53:50 GMT+300 2025 com.google.appinventor.client.Ode
+INFO: Locking Screens
+ode-0.js:4090 Thu Jun 12 15:53:50 GMT+300 2025 com.google.appinventor.client.settings.project.ProjectSettings
+INFO: Saving project settings: {"SimpleSettings":{"AccentColor":"&HFFFF4081","ActionBar":"True","AppName":"","BlocksToolkit":"","DefaultFileScope":"App","Icon":"","PhonePreview":"Classic","PhoneTablet":"False","PrimaryColor":"&HFF3F51B5","PrimaryColorDark":"&HFF303F9F","ScreenCheckboxStateMap":"","ShowHiddenComponents":"False","ShowListsAsJson":"True","Sizing":"Responsive","Theme":"AppTheme.Light.DarkActionBar","TutorialURL":"","UsesLocation":"False","VersionCode":"1","VersionName":"1.0"}}
+ode-0.js:4090 Thu Jun 12 15:53:50 GMT+300 2025 com.google.appinventor.client.Ode
+INFO: Unlocking Screens
