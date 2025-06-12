@@ -133,7 +133,7 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
         formData.append('extensions', file);
       });
 
-      const response = await fetch("/api/generate-aia", {
+      const response = await fetch("/api/generate", {
         method: "POST",
         body: formData,
         credentials: "include",
