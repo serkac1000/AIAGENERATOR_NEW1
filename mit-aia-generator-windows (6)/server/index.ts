@@ -50,9 +50,9 @@ try {
       execSync(`taskkill /PID ${pid} /F`);
       log(`Process ${pid} terminated.`);
     }
-  } catch (error) {
-    log(`No process found on port ${port}.`);
   }
+} catch (error) {
+  log(`No process found on port ${port}.`);
 }
 
 // Register routes before Vite to ensure API precedence
