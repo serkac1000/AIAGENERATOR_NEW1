@@ -121,21 +121,15 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
     mutationFn: async (data: GenerateAiaRequest) => {
       const formData = new FormData();
 
-      // Append form fields
-      Object.entries(data).forEach(([key, value]) => {
-        if (key !== 'extensions') {
-          formData.append(key, String(value));
-        }
-      });
-
-      // Append files
-      uploadedFiles.forEach(file => {
-        formData.append('extensions', file);
-      });
+      // For now, we'll send the data as JSON
+      // File upload functionality can be added later if needed
 
       const response = await fetch("/api/generate", {
         method: "POST",
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
         credentials: "include",
       });
 

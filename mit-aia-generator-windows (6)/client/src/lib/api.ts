@@ -22,9 +22,12 @@ export const aiaApi = {
       formData.append('extensions', file);
     });
 
-    const response = await fetch("/api/generate-aia", {
+    const response = await fetch("/api/generate", {
       method: "POST",
-      body: formData,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
       credentials: "include",
     });
 
