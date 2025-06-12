@@ -58,8 +58,27 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
 
   const validateMutation = useMutation({
     mutationFn: async (data: GenerateAiaRequest) => {
-      const response = await apiRequest("POST", "/api/validate", data);
-      return response.json();
+      try {
+        const response = await apiRequest("POST", "/api/validate", data);
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorData;
+
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { message: errorText || 'Validation failed' };
+          }
+
+          console.error('Validation error details:', { status: response.status, response: errorData });
+          throw errorData;
+        }
+
+        return response.json();
+      } catch (error) {
+        console.error('Validation error details:', error);
+        throw error;
+      }
     },
     onSuccess: (data) => {
       onClearStatus();
@@ -87,14 +106,14 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
     onError: (error: any) => {
       onClearStatus();
       onStatusMessage("Validation failed", "error");
-      
+
       // Log detailed error information
       console.error("Validation error details:", error);
-      
+
       if (error.message) {
         onStatusMessage(`Error: ${error.message}`, "error");
       }
-      
+
       // Try to parse and display more specific error details
       try {
         if (error.response) {
@@ -108,7 +127,7 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
       } catch (parseError) {
         console.error("Error parsing error response:", parseError);
       }
-      
+
       toast({
         title: "Validation Failed",
         description: "Please check your configuration and try again.",
@@ -119,34 +138,48 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
 
   const generateMutation = useMutation({
     mutationFn: async (data: GenerateAiaRequest) => {
-      const formData = new FormData();
+      try {
+        const formData = new FormData();
 
-      // For now, we'll send the data as JSON
-      // File upload functionality can be added later if needed
+        // For now, we'll send the data as JSON
+        // File upload functionality can be added later if needed
 
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+          credentials: "include",
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Generation failed');
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorMessage = 'Generation failed';
+
+          try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.message || errorMessage;
+          } catch {
+            errorMessage = errorText || errorMessage;
+          }
+
+          throw new Error(errorMessage);
+        }
+
+        return response;
+      } catch (error) {
+        console.error('Network error during generation:', error);
+        throw error;
       }
-
-      return response;
     },
     onMutate: () => {
       onClearStatus();
       const timestamp = new Date().toISOString();
       const formData = form.getValues();
-      
+
       onStatusMessage("🚀 Starting AIA file generation...", "info");
-      
+
       // Log configuration details for debugging
       console.log(`[${timestamp}] AIA Generation Started with config:`, {
         projectName: formData.projectName,
@@ -159,7 +192,7 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
         saveConfig: formData.saveConfig,
         validateStrict: formData.validateStrict
       });
-      
+
       onStatusMessage("🔍 Validating MIT App Inventor 2 specifications...", "info");
       onStatusMessage("⚙️ Processing project configuration...", "info");
       onStatusMessage("🏗️ Generating component structure...", "info");
@@ -185,11 +218,11 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
     },
     onError: (error: any) => {
       onStatusMessage("❌ Generation failed", "error");
-      
+
       // Log detailed error information with timestamps
       const timestamp = new Date().toISOString();
       console.error(`[${timestamp}] AIA Generation Error:`, error);
-      
+
       // Log request details for debugging
       const formData = form.getValues();
       console.error(`[${timestamp}] Request data:`, {
@@ -200,26 +233,26 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
         requirementsLength: formData.requirements?.length || 0,
         extensionsCount: formData.extensions?.length || 0
       });
-      
+
       // Enhanced error message handling
       if (error.message) {
         onStatusMessage(`❌ Error details: ${error.message}`, "error");
         console.error(`[${timestamp}] Error message:`, error.message);
       }
-      
+
       // Network/fetch specific errors
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
         onStatusMessage("❌ Network error: Unable to connect to server", "error");
         onStatusMessage("💡 Check if the server is running and accessible", "warning");
         console.error(`[${timestamp}] Network/fetch error detected`);
       }
-      
+
       // Server response errors
       try {
         if (error.response) {
           const errorData = error.response.data || error.response;
           console.error(`[${timestamp}] Server response:`, errorData);
-          
+
           if (typeof errorData === 'string') {
             onStatusMessage(`❌ Server response: ${errorData}`, "error");
           } else if (errorData.message) {
@@ -237,7 +270,7 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
               });
             }
           }
-          
+
           // Log HTTP status if available
           if (error.response.status) {
             onStatusMessage(`❌ HTTP Status: ${error.response.status}`, "error");
@@ -248,23 +281,23 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
         console.error(`[${timestamp}] Error parsing server response:`, parseError);
         onStatusMessage("❌ Unable to parse server error response", "error");
       }
-      
+
       // Stack trace for development
       if (error.stack) {
         console.error(`[${timestamp}] Stack trace:`, error.stack);
       }
-      
+
       // Additional debugging information
       if (error.cause) {
         console.error(`[${timestamp}] Error cause:`, error.cause);
         onStatusMessage(`❌ Root cause: ${error.cause}`, "error");
       }
-      
+
       // Browser/environment specific errors
       if (navigator.onLine === false) {
         onStatusMessage("❌ Network offline - check internet connection", "error");
       }
-      
+
       // Provide actionable feedback based on error type
       if (error.message?.includes('API key')) {
         onStatusMessage("💡 Suggestion: Verify your Google API key is valid and has Custom Search API enabled", "warning");
@@ -277,7 +310,7 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
       } else {
         onStatusMessage("💡 Suggestion: Check all configuration fields and try again", "warning");
       }
-      
+
       toast({
         title: "AIA Generation Failed",
         description: "Detailed error information has been logged. Check the status panel for more details.",
