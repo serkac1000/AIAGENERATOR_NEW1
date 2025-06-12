@@ -5,13 +5,13 @@
     "@types/node": "^24.0.1",
     "@vitejs/plugin-react": "^4.5.2",
     "adm-zip": "^0.5.16",
-    "cross-env": "^7.0.3",
     "express": "^5.1.0",
     "multer": "^2.0.1",
     "vite": "^6.3.5",
     "zod": "^3.25.63"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "tsx": "^4.20.2"
   }
 }

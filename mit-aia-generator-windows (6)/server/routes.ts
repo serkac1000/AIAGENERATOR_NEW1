@@ -1,35 +1,90 @@
+
 import { Router, Request, Response } from "express";
-import { z } from "zod";
+import multer from "multer";
 import admZip from "adm-zip";
-import * as path from "path";
-import * as fs from "fs";
-import express from "express";
-import { generateAiaRequestSchema } from "@shared/schema";
+import { generateAiaRequestSchema, type GenerateAiaRequest } from "../shared/schema";
+import { log } from "./vite";
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
-// Use the shared schema for consistency
-const generateSchema = generateAiaRequestSchema;
+// Validation endpoint
+router.post("/validate", async (req: Request, res: Response) => {
+  try {
+    const validatedData = generateAiaRequestSchema.parse(req.body);
+    log(`[INFO] Validation successful for project: ${validatedData.projectName}`);
+    
+    res.json({
+      success: true,
+      message: "Configuration is valid",
+      data: validatedData
+    });
+  } catch (error: any) {
+    log(`[ERROR] Validation failed: ${error.message}`);
+    res.status(400).json({
+      success: false,
+      message: "Validation failed",
+      errors: error.errors || [{ message: error.message }]
+    });
+  }
+});
 
-// Function to generate .aia file
-function generateAiaFile(searchPrompt: string, appName: string): string {
+// AIA generation endpoint
+router.post("/generate", upload.array('extensions'), async (req: Request, res: Response) => {
+  try {
+    log(`[INFO] Starting AIA generation with data: ${JSON.stringify(req.body)}`);
+    
+    const validatedData = generateAiaRequestSchema.parse(req.body);
+    const { projectName, userId, searchPrompt } = validatedData;
+    
+    // Generate the AIA file
+    const aiaBuffer = generateAiaFile(searchPrompt, projectName, userId);
+    
+    // Set headers for file download
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${projectName}.aia"`);
+    res.setHeader('Content-Length', aiaBuffer.length.toString());
+    
+    log(`[INFO] AIA file generated successfully for project: ${projectName}`);
+    res.send(aiaBuffer);
+    
+  } catch (error: any) {
+    log(`[ERROR] AIA generation failed: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate AIA file",
+      error: error.message
+    });
+  }
+});
+
+function generateAiaFile(searchPrompt: string, appName: string, userId: string): Buffer {
+  log(`[DEBUG] Generating .aia file for appName: ${appName}, searchPrompt: ${searchPrompt}, userId: ${userId}`);
   const zip = new admZip();
 
   // Create project.properties
-  const projectProperties = `
+  const projectProperties = `main=appinventor.ai_${userId}.${appName}.Screen1
 name=${appName}
-main=appinventor.ai_serkac100.${appName}.Screen1
-versionname=1.0
-versioncode=1
 assets=../assets
 source=../src
 build=../build
+versioncode=1
+versionname=1.0
+useslocation=false
+aname=${appName}
+sizing=Responsive
+showlistsasjson=true
+actionbar=false
+theme=AppTheme.Light.DarkActionBar
+color.primary=&HFF3F51B5
+color.primary.dark=&HFF303F9F
+color.accent=&HFFFF4081
+color.primary.light=&HFFC5CAE9
 `;
   zip.addFile("youngandroidproject/project.properties", Buffer.from(projectProperties));
 
-  // Create Screen1.scm with dynamic searchPrompt
-  const screen1Scm = `
-#|
+  // Create Screen1.scm with proper structure
+  const screen1Scm = `#|
 $JSON
 {
   "authURL": ["ai2.appinventor.mit.edu"],
@@ -39,132 +94,290 @@ $JSON
     "$Name": "Screen1",
     "$Type": "Form",
     "$Version": "31",
-    "ActionBar": true,
+    "ActionBar": false,
     "AppName": "${appName}",
-    "Title": "${appName} Search",
+    "BackgroundColor": "&HFFFFFFFF",
+    "Icon": "icon.png",
+    "Sizing": "Responsive",
+    "Title": "${appName}",
+    "TitleVisible": true,
     "Uuid": "0",
     "$Components": [
       {
-        "$Name": "SearchBox",
-        "$Type": "TextBox",
-        "$Version": "6",
-        "Uuid": "879363160",
-        "Hint": "Enter search query",
-        "Text": "${searchPrompt}",
-        "Width": "Fill"
-      },
-      {
-        "$Name": "SearchButton",
-        "$Type": "Button",
-        "$Version": "7",
-        "Uuid": "182715260",
-        "Text": "Search",
-        "BackgroundColor": "&HFF4CAF50",
-        "TextColor": "&HFFFFFFFF",
-        "Width": "Fill"
-      },
-      {
-        "$Name": "Web1",
-        "$Type": "Web",
-        "$Version": "6",
-        "Uuid": "995117567"
-      },
-      {
-        "$Name": "ResultLabel",
-        "$Type": "Label",
-        "$Version": "6",
-        "Uuid": "479436357",
-        "Text": "Search results will appear here",
-        "FontSize": "16sp",
-        "TextAlignment": "center",
-        "Width": "Fill",
-        "Height": "WrapContent"
+        "$Name": "VerticalArrangement1",
+        "$Type": "VerticalArrangement",
+        "$Version": "4",
+        "AlignHorizontal": "3",
+        "AlignVertical": "2",
+        "Height": "-2",
+        "Width": "-2",
+        "Uuid": "123456789",
+        "$Components": [
+          {
+            "$Name": "TitleLabel",
+            "$Type": "Label",
+            "$Version": "6",
+            "FontBold": true,
+            "FontSize": "24",
+            "Text": "${appName} Search",
+            "TextAlignment": "1",
+            "TextColor": "&HFF3F51B5",
+            "Width": "-2",
+            "Height": "-1",
+            "Uuid": "987654321"
+          },
+          {
+            "$Name": "SearchBox",
+            "$Type": "TextBox",
+            "$Version": "6",
+            "Hint": "Enter your search query",
+            "Text": "${searchPrompt || ''}",
+            "Width": "-2",
+            "Height": "-1",
+            "FontSize": "16",
+            "Uuid": "879363160"
+          },
+          {
+            "$Name": "SearchButton",
+            "$Type": "Button",
+            "$Version": "7",
+            "BackgroundColor": "&HFF4CAF50",
+            "FontBold": true,
+            "FontSize": "18",
+            "Text": "Search",
+            "TextColor": "&HFFFFFFFF",
+            "Width": "-2",
+            "Height": "-1",
+            "Uuid": "182715260"
+          },
+          {
+            "$Name": "Web1",
+            "$Type": "Web",
+            "$Version": "6",
+            "Height": "-1",
+            "Width": "-1",
+            "Uuid": "995117567"
+          },
+          {
+            "$Name": "ScrollableArrangement1",
+            "$Type": "VerticalScrollArrangement",
+            "$Version": "5",
+            "AlignHorizontal": "3",
+            "BackgroundColor": "&HFF00FFFFFF",
+            "Height": "-1",
+            "Width": "-2",
+            "Uuid": "456789123",
+            "$Components": [
+              {
+                "$Name": "ResultLabel",
+                "$Type": "Label",
+                "$Version": "6",
+                "FontSize": "14",
+                "Text": "Search results will appear here. Tap the Search button to begin.",
+                "TextAlignment": "0",
+                "Width": "-2",
+                "Height": "-1",
+                "Uuid": "479436357"
+              }
+            ]
+          }
+        ]
       }
     ]
   }
 }
-|#
-`;
-  zip.addFile(`src/appinventor/ai_serkac100/${appName}/Screen1.scm`, Buffer.from(screen1Scm));
+|#`;
 
-  // Add Screen1.bky (from your provided file)
-  const screen1Bky = `
-<xml xmlns="https://developers.google.com/blockly/xml">
-  <block type="component_event" x="50" y="50">
-    <mutation component_type="Button" event_name="Click" component_id="SearchButton"></mutation>
-    <field name="component_id">SearchButton</field>
-    <field name="event_name">Click</field>
+  zip.addFile(`src/appinventor/ai_${userId}/${appName}/Screen1.scm`, Buffer.from(screen1Scm));
+
+  // Create Screen1.bky (blocks file) with proper Google Custom Search implementation
+  const screen1Bky = `<xml xmlns="https://developers.google.com/blockly/xml">
+  <variables>
+    <variable id="searchQuery">searchQuery</variable>
+    <variable id="apiUrl">apiUrl</variable>
+    <variable id="results">results</variable>
+  </variables>
+  <block type="component_event" id="SearchButton_Click" x="20" y="20">
+    <mutation component_type="Button" instance_name="SearchButton" event_name="Click"></mutation>
     <statement name="DO">
-      <block type="component_method">
-        <mutation component_type="Web" method_name="Url" number_of_parameters="1"></mutation>
-        <field name="component_id">Web1</field>
-        <field name="method_name">Url</field>
-        <value name="arg0">
-          <block type="text_join">
-            <mutation items="4"></mutation>
-            <value name="ADD0">
-              <block type="text">
-                <field name="TEXT">https://www.googleapis.com/customsearch/v1?key=</field>
-              </block>
-            </value>
-            <value name="ADD1">
-              <block type="text">
-                <field name="TEXT">AIzaSyAywYenAfHuXtEhYc0NQdZ09kdG5r967Vk</field>
-              </block>
-            </value>
-            <value name="ADD2">
-              <block type="text">
-                <field name="TEXT">&cx=b0c556cb0efcb482a&q=</field>
-              </block>
-            </value>
-            <value name="ADD3">
-              <block type="component_get_property">
-                <mutation component_type="TextBox" property_name="Text"></mutation>
-                <field name="component_id">SearchBox</field>
-                <field name="property_name">Text</field>
-              </block>
-            </value>
+      <block type="lexical_variable_set" id="setSearchQuery">
+        <field name="VAR">searchQuery</field>
+        <value name="VALUE">
+          <block type="component_method" id="getSearchText">
+            <mutation component_type="TextBox" method_name="Text" instance_name="SearchBox"></mutation>
           </block>
         </value>
         <next>
-          <block type="component_method">
-            <mutation component_type="Web" method_name="Get"></mutation>
-            <field name="component_id">Web1</field>
-            <field name="method_name">Get</field>
+          <block type="controls_if" id="checkNotEmpty">
+            <value name="IF0">
+              <block type="logic_compare" id="compareLength">
+                <field name="OP">GT</field>
+                <value name="A">
+                  <block type="text_length" id="textLength">
+                    <value name="VALUE">
+                      <block type="lexical_variable_get" id="getSearchQuery">
+                        <field name="VAR">searchQuery</field>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <value name="B">
+                  <block type="math_number" id="zeroNumber">
+                    <field name="NUM">0</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="component_set_get" id="setResultText">
+                <mutation component_type="Label" set_or_get="set" property_name="Text" instance_name="ResultLabel"></mutation>
+                <value name="VALUE">
+                  <block type="text" id="searchingText">
+                    <field name="TEXT">Searching...</field>
+                  </block>
+                </value>
+                <next>
+                  <block type="lexical_variable_set" id="setApiUrl">
+                    <field name="VAR">apiUrl</field>
+                    <value name="VALUE">
+                      <block type="text_join" id="buildUrl">
+                        <mutation items="6"></mutation>
+                        <value name="ADD0">
+                          <block type="text" id="baseUrl">
+                            <field name="TEXT">https://www.googleapis.com/customsearch/v1?key=</field>
+                          </block>
+                        </value>
+                        <value name="ADD1">
+                          <block type="text" id="apiKey">
+                            <field name="TEXT">YOUR_API_KEY_HERE</field>
+                          </block>
+                        </value>
+                        <value name="ADD2">
+                          <block type="text" id="cxParam">
+                            <field name="TEXT">&amp;cx=</field>
+                          </block>
+                        </value>
+                        <value name="ADD3">
+                          <block type="text" id="cseId">
+                            <field name="TEXT">YOUR_CSE_ID_HERE</field>
+                          </block>
+                        </value>
+                        <value name="ADD4">
+                          <block type="text" id="qParam">
+                            <field name="TEXT">&amp;q=</field>
+                          </block>
+                        </value>
+                        <value name="ADD5">
+                          <block type="lexical_variable_get" id="getSearchQueryForUrl">
+                            <field name="VAR">searchQuery</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="component_method" id="webGet">
+                        <mutation component_type="Web" method_name="Get" instance_name="Web1"></mutation>
+                        <value name="ARG0">
+                          <block type="lexical_variable_get" id="getApiUrlForWeb">
+                            <field name="VAR">apiUrl</field>
+                          </block>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <statement name="ELSE">
+              <block type="component_set_get" id="setEmptyText">
+                <mutation component_type="Label" set_or_get="set" property_name="Text" instance_name="ResultLabel"></mutation>
+                <value name="VALUE">
+                  <block type="text" id="emptyQueryText">
+                    <field name="TEXT">Please enter a search query</field>
+                  </block>
+                </value>
+              </block>
+            </statement>
           </block>
         </next>
       </block>
     </statement>
   </block>
-  <block type="component_event" x="50" y="300">
-    <mutation component_type="Web" event_name="GotText" component_id="Web1"></mutation>
-    <field name="component_id">Web1</field>
-    <field name="event_name">GotText</field>
+  <block type="component_event" id="Web1_GotText" x="20" y="400">
+    <mutation component_type="Web" instance_name="Web1" event_name="GotText"></mutation>
+    <value name="ARG0">
+      <block type="lexical_variable_get" id="urlArg">
+        <field name="VAR">url</field>
+      </block>
+    </value>
+    <value name="ARG1">
+      <block type="lexical_variable_get" id="responseCodeArg">
+        <field name="VAR">responseCode</field>
+      </block>
+    </value>
+    <value name="ARG2">
+      <block type="lexical_variable_get" id="responseTypeArg">
+        <field name="VAR">responseType</field>
+      </block>
+    </value>
+    <value name="ARG3">
+      <block type="lexical_variable_get" id="responseContentArg">
+        <field name="VAR">responseContent</field>
+      </block>
+    </value>
     <statement name="DO">
-      <block type="controls_if">
+      <block type="controls_if" id="checkResponseCode">
         <value name="IF0">
-          <block type="logic_compare">
+          <block type="logic_compare" id="responseCodeCheck">
             <field name="OP">EQ</field>
             <value name="A">
-              <block type="variable_get">
+              <block type="lexical_variable_get" id="getResponseCode">
                 <field name="VAR">responseCode</field>
               </block>
             </value>
             <value name="B">
-              <block type="math_number">
+              <block type="math_number" id="successCode">
                 <field name="NUM">200</field>
               </block>
             </value>
           </block>
         </value>
         <statement name="DO0">
-          <block type="component_set_get_property">
-            <mutation component_type="Label" property_name="Text"></mutation>
-            <field name="component_id">ResultLabel</field>
-            <field name="property_name">Text</field>
+          <block type="component_set_get" id="setSuccessResult">
+            <mutation component_type="Label" set_or_get="set" property_name="Text" instance_name="ResultLabel"></mutation>
             <value name="VALUE">
-              <block type="variable_get">
-                <field name="VAR">responseContent</field>
+              <block type="text_join" id="successMessage">
+                <mutation items="2"></mutation>
+                <value name="ADD0">
+                  <block type="text" id="successPrefix">
+                    <field name="TEXT">Search Results:\\n</field>
+                  </block>
+                </value>
+                <value name="ADD1">
+                  <block type="lexical_variable_get" id="getResponseContent">
+                    <field name="VAR">responseContent</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+          </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="component_set_get" id="setErrorResult">
+            <mutation component_type="Label" set_or_get="set" property_name="Text" instance_name="ResultLabel"></mutation>
+            <value name="VALUE">
+              <block type="text_join" id="errorMessage">
+                <mutation items="2"></mutation>
+                <value name="ADD0">
+                  <block type="text" id="errorPrefix">
+                    <field name="TEXT">Error: </field>
+                  </block>
+                </value>
+                <value name="ADD1">
+                  <block type="lexical_variable_get" id="getErrorResponse">
+                    <field name="VAR">responseContent</field>
+                  </block>
+                </value>
               </block>
             </value>
           </block>
@@ -172,87 +385,17 @@ $JSON
       </block>
     </statement>
   </block>
-</xml>
-`;
-  zip.addFile(`src/appinventor/ai_serkac100/${appName}/Screen1.bky`, Buffer.from(screen1Bky));
+</xml>`;
 
-  // Save .aia file
-  const outputPath = path.join(__dirname, `${appName}.aia`);
-  zip.writeZip(outputPath);
-  return outputPath;
+  zip.addFile(`src/appinventor/ai_${userId}/${appName}/Screen1.bky`, Buffer.from(screen1Bky));
+
+  // Add assets directory with a default icon
+  const iconData = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==", "base64");
+  zip.addFile(`assets/icon.png`, iconData);
+
+  return zip.toBuffer();
 }
 
-// Register routes
-export async function registerRoutes(app: express.Express) {
-  // Validation endpoint
-  router.post("/api/validate", async (req: Request, res: Response) => {
-    try {
-      console.log("Validation request received:", req.body);
-      
-      // Validate the request data
-      const validatedData = generateAiaRequestSchema.parse(req.body);
-      
-      // Perform additional validation checks
-      const validationResults = {
-        valid: true,
-        message: "Configuration is valid",
-        detectedFeatures: {
-          use_list_view: validatedData.requirements?.toLowerCase().includes('list view') || false,
-          play_sound: validatedData.requirements?.toLowerCase().includes('sound') || false,
-        },
-        warnings: [] as string[]
-      };
-
-      // Check for potential issues
-      if (!validatedData.apiKey || validatedData.apiKey.length < 30) {
-        validationResults.warnings.push("API key appears to be too short");
-      }
-      
-      if (!validatedData.cseId || validatedData.cseId.length < 10) {
-        validationResults.warnings.push("CSE ID appears to be too short");
-      }
-
-      console.log("Validation successful:", validationResults);
-      res.json(validationResults);
-      
-    } catch (error) {
-      console.error("Validation error:", error);
-      
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          valid: false,
-          message: "Validation failed",
-          errors: error.errors.map(err => ({
-            field: err.path.join('.'),
-            message: err.message
-          }))
-        });
-      } else {
-        res.status(500).json({
-          valid: false,
-          message: "Internal server error during validation",
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
-      }
-    }
-  });
-
-  router.post("/api/generate", async (req: Request, res: Response) => {
-    try {
-      const validatedData = generateSchema.parse(req.body);
-      const { searchPrompt, projectName } = validatedData;
-      const aiaPath = generateAiaFile(searchPrompt, projectName);
-      res.download(aiaPath, `${projectName}.aia`, (err) => {
-        if (err) {
-          res.status(500).json({ message: "Failed to send .aia file" });
-        }
-        fs.unlinkSync(aiaPath);
-      });
-    } catch (error) {
-      res.status(400).json({ valid: false, message: (error as Error).message, errors: error });
-    }
-  });
-
-  app.use(router);
-  return app.listen();
+export function registerRoutes(app: any) {
+  app.use('/api', router);
 }

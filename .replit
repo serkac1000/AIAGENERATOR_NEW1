@@ -14,7 +14,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd \"mit-aia-generator-windows (6)\" && npm run dev"
+args = "cd \"mit-aia-generator-windows (6)\" && npm install && npm run dev"
 
 [deployment]
 run = ["sh", "-c", "node index.js"]

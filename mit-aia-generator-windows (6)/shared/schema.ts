@@ -38,7 +38,20 @@ export const insertAiaProjectSchema = createInsertSchema(aiaProjects).omit({
   extensions: z.array(z.string()).default([]),
 });
 
-export const generateAiaRequestSchema = insertAiaProjectSchema.extend({
+export const generateAiaRequestSchema = z.object({
+  projectName: z.string()
+    .min(1, "Project name is required")
+    .max(50, "Project name too long")
+    .regex(/^[a-zA-Z][a-zA-Z0-9_]*$/, "Project name must start with a letter and contain only letters, numbers, and underscores"),
+  userId: z.string()
+    .min(1, "User ID is required")
+    .max(50, "User ID too long")
+    .regex(/^[a-zA-Z][a-zA-Z0-9_]*$/, "User ID must start with a letter and contain only letters, numbers, and underscores"),
+  apiKey: z.string().min(1, "Google API key is required"),
+  cseId: z.string().min(1, "Custom Search Engine ID is required"),
+  searchPrompt: z.string().optional(),
+  requirements: z.string().optional(),
+  extensions: z.array(z.string()).default([]),
   saveConfig: z.boolean().default(false),
   validateStrict: z.boolean().default(true),
 });
