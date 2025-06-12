@@ -2,8 +2,25 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let errorMessage = `${res.status}: ${res.statusText}`;
+    
+    try {
+      const contentType = res.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        const errorData = await res.json();
+        errorMessage = `${res.status}: ${errorData.message || errorData.error || res.statusText}`;
+      } else {
+        const text = await res.text();
+        if (text && text.length < 200 && !text.includes('<!DOCTYPE')) {
+          errorMessage = `${res.status}: ${text}`;
+        }
+      }
+    } catch (parseError) {
+      console.error('Failed to parse error response:', parseError);
+      // Keep the default error message
+    }
+    
+    throw new Error(errorMessage);
   }
 }
 
@@ -36,8 +53,9 @@ export const apiRequest = async (
         try {
           const errorData = await response.json();
           errorMessage = errorData.message || errorMessage;
-        } catch {
-          // If JSON parsing fails, use the default error message
+        } catch (jsonError) {
+          console.error('Failed to parse JSON error response:', jsonError);
+          errorMessage = `Server error (${response.status}): Unable to parse error details`;
         }
       } else if (contentType?.includes('text/html')) {
         // Handle HTML error responses (like 404 pages)
@@ -48,8 +66,9 @@ export const apiRequest = async (
           if (textResponse.length < 200) {
             errorMessage = textResponse || errorMessage;
           }
-        } catch {
-          // If text parsing fails, use the default error message
+        } catch (textError) {
+          console.error('Failed to parse text error response:', textError);
+          errorMessage = `Server error (${response.status}): Unable to parse error details`;
         }
       }
 
@@ -83,7 +102,18 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    
+    try {
+      const contentType = res.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        return await res.json();
+      } else {
+        throw new Error('Expected JSON response but received: ' + (contentType || 'unknown content type'));
+      }
+    } catch (jsonError) {
+      console.error('Failed to parse JSON response:', jsonError);
+      throw new Error('Invalid JSON response from server');
+    }
   };
 
 export const queryClient = new QueryClient({
