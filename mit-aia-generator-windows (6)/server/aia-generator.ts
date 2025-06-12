@@ -79,16 +79,15 @@ aname=${projectName}
 defaultfilescope=App
 main=appinventor.ai_${userId}.${projectName}.Screen1
 source=../src
-actionbar=True
-useslocation=False
+actionbar=true
+useslocation=false
 assets=../assets
 build=../build
 name=${projectName}
-showlistsasjson=True
+showlistsasjson=true
 theme=AppTheme.Light.DarkActionBar
 versioncode=1
-versionname=1.0
-external_comps=${externalComps}
+versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
 `;
 
     await fs.promises.writeFile(
@@ -97,7 +96,17 @@ external_comps=${externalComps}
       'utf-8'
     );
 
-    // Generate Screen1.scm
+    // Create required .gitignore file in youngandroid project
+    const gitignore = `build/
+.DS_Store
+`;
+    await fs.promises.writeFile(
+      path.join(youngandroidDir, '.gitignore'),
+      gitignore,
+      'utf-8'
+    );
+
+    // Generate Screen1.scm with proper component structure
     const components = [
       {
         "$Name": "SearchBox",
@@ -105,8 +114,8 @@ external_comps=${externalComps}
         "$Version": "6",
         "Uuid": generateUuid(),
         "Hint": "Enter search query",
-        "Text": searchPrompt,
-        "Width": "Fill"
+        "Text": searchPrompt || "",
+        "Width": "-1100"
       },
       {
         "$Name": "SearchButton",
@@ -116,7 +125,7 @@ external_comps=${externalComps}
         "Text": "Search",
         "BackgroundColor": "&HFF4CAF50",
         "TextColor": "&HFFFFFFFF",
-        "Width": "Fill"
+        "Width": "-1100"
       },
       {
         "$Name": "Web1",
@@ -132,8 +141,8 @@ external_comps=${externalComps}
         "$Type": "ListView",
         "$Version": "8",
         "Uuid": generateUuid(),
-        "Width": "Fill",
-        "Height": "WrapContent"
+        "Width": "-1100",
+        "Height": "-1050"
       });
     } else {
       components.push({
@@ -142,10 +151,10 @@ external_comps=${externalComps}
         "$Version": "6",
         "Uuid": generateUuid(),
         "Text": "Search results will appear here",
-        "FontSize": "16sp",
-        "TextAlignment": "center",
-        "Width": "Fill",
-        "Height": "WrapContent"
+        "FontSize": "16",
+        "TextAlignment": "1",
+        "Width": "-1100",
+        "Height": "-1050"
       });
     }
 
@@ -164,11 +173,11 @@ external_comps=${externalComps}
           "Text": "Play Sound",
           "BackgroundColor": "&HFFF44336",
           "TextColor": "&HFFFFFFFF",
-          "Width": "Fill"
+          "Width": "-1100"
         },
         {
           "$Name": "Sound1",
-          "$Type": "Sound",
+          "$Type": "Sound",  
           "$Version": "6",
           "Uuid": generateUuid(),
           "Source": soundFile
@@ -181,13 +190,14 @@ external_comps=${externalComps}
       "YaVersion": "232",
       "Source": "Form",
       "Properties": {
-        "$Name": "Screen1",
+        "$Name": "Screen1", 
         "$Type": "Form",
         "$Version": "31",
         "ActionBar": true,
         "AppName": projectName,
         "Title": `${projectName} Search`,
         "Uuid": "0",
+        "Sizing": "Responsive",
         "$Components": components
       }
     };
