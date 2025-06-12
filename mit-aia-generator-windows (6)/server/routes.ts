@@ -8,7 +8,7 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Validation endpoint
-router.post("/validate", async (req: Request, res: Response) => {
+router.post("/api/validate", async (req: Request, res: Response) => {
   try {
     const validatedData = generateAiaRequestSchema.parse(req.body);
     log(`[INFO] Validation successful for project: ${validatedData.projectName}`);
@@ -29,7 +29,7 @@ router.post("/validate", async (req: Request, res: Response) => {
 });
 
 // AIA generation endpoint
-router.post("/generate", upload.array('extensions'), async (req: Request, res: Response) => {
+router.post("/api/generate", upload.array('extensions'), async (req: Request, res: Response) => {
   try {
     log(`[INFO] Starting AIA generation with data: ${JSON.stringify(req.body)}`);
 

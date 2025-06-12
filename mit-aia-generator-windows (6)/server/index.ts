@@ -4,8 +4,6 @@ import { setupVite, serveStatic, log } from "./vite";
 import { createServer } from "http";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 
 // Debug middleware to log all incoming requests
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -40,8 +38,22 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 (async () => {
   const PORT = process.env.PORT || 5000;
   try {
-    // Add middleware for parsing JSON
-    app.use(express.json({ limit: '50mb' }));
+    // Add middleware for parsing JSON with error handling
+    app.use(express.json({ 
+      limit: '50mb',
+      verify: (req, res, buf) => {
+        try {
+          JSON.parse(buf.toString());
+        } catch (e) {
+          res.status(400).json({
+            success: false,
+            message: 'Invalid JSON in request body',
+            error: 'Malformed JSON'
+          });
+          throw new Error('Invalid JSON');
+        }
+      }
+    }));
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
     // Add CORS headers for development
@@ -67,13 +79,30 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       serveStatic(app);
     }
 
+    // Add middleware to ensure JSON responses for API routes
+    app.use('/api/*', (req, res, next) => {
+      res.setHeader('Content-Type', 'application/json');
+      next();
+    });
+
     // Add error handling middleware
     app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
       console.error('Server error:', error);
-      res.status(500).json({
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
-      });
+      
+      // Ensure JSON response for API routes
+      if (req.path.startsWith('/api/')) {
+        res.setHeader('Content-Type', 'application/json');
+        res.status(error.status || 500).json({
+          success: false,
+          message: error.message || 'Internal server error',
+          error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        });
+      } else {
+        res.status(500).json({
+          message: 'Internal server error',
+          error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        });
+      }
     });
 
     // Create HTTP server
