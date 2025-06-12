@@ -1,24 +1,64 @@
+import archiver from 'archiver';
 import fs from 'fs';
 import path from 'path';
+import type { GenerateAiaRequest } from '@shared/schema';
+
+interface ExtensionFile {
+  originalname: string;
+  buffer: Buffer;
+  path?: string;
+}
+
+function parseRequirements(requirements: string = '') {
+  const req = requirements.toLowerCase();
+
+  return {
+    use_list_view: req.includes('list view') || req.includes('show results in list'),
+    play_sound: req.includes('play sound') || req.includes('sound'),
+    custom_styling: req.includes('custom styling') || req.includes('theme'),
+  };
+}
+
+// Configuration storage
+const configPath = path.join(process.cwd(), 'config.json');
+
+export function saveConfiguration(userId: string, apiKey: string, cseId: string) {
+  try {
+    const config = {
+      userId,
+      apiKey,
+      cseId,
+      savedAt: new Date().toISOString()
+    };
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    console.log('Configuration saved successfully');
+    return true;
+  } catch (error) {
+    console.error('Failed to save configuration:', error);
+    return false;
+  }
+}
+
+export function loadConfiguration() {
+  try {
+    if (fs.existsSync(configPath)) {
+      const configData = fs.readFileSync(configPath, 'utf8');
+      return JSON.parse(configData);
+    }
+  } catch (error) {
+    console.error('Failed to load configuration:', error);
+  }
+  return null;
+}
 import { promisify } from 'util';
 import { pipeline } from 'stream';
-import archiver from 'archiver';
 import { v4 as uuidv4 } from 'uuid';
-import type { GenerateAiaRequest } from '@shared/schema';
 
 const pipelineAsync = promisify(pipeline);
 
 interface ParsedFeatures {
   use_list_view: boolean;
   play_sound: boolean;
-}
-
-function parseRequirements(requirements: string = ''): ParsedFeatures {
-  const req = requirements.toLowerCase();
-  return {
-    use_list_view: req.includes('list view') || req.includes('show results in list'),
-    play_sound: req.includes('play sound') || req.includes('sound')
-  };
 }
 
 function generateUuid(): string {
@@ -43,7 +83,7 @@ export async function generateAiaFile(
 
   const features = parseRequirements(requirements);
   const tempDir = path.join(process.cwd(), 'temp', `${projectName}_${Date.now()}`);
-  
+
   try {
     // Create directory structure
     const assetsDir = path.join(tempDir, 'assets');
@@ -68,7 +108,7 @@ export async function generateAiaFile(
     // Generate project.properties
     const timestamp = new Date().toUTCString();
     const externalComps = extensionNames.map(name => `com.appybuilder.${name}`).join(',');
-    
+
     const projectProperties = `#
 #${timestamp}
 sizing=Responsive
@@ -256,7 +296,7 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
       </block>
     </statement>
   </block>
-  
+
   <block type="component_event" x="50" y="300">
     <mutation component_type="Web" event_name="GotText" component_id="Web1"></mutation>
     <field name="component_id">Web1</field>
@@ -341,7 +381,7 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
         for (const item of items) {
           const fullPath = path.join(dir, item.name);
           const archivePath = prefix ? `${prefix}/${item.name}` : item.name;
-          
+
           if (item.isDirectory()) {
             await addFilesRecursively(fullPath, archivePath);
           } else {

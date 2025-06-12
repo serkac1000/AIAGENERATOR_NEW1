@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 import multer from "multer";
 import { generateAiaRequestSchema } from "@shared/schema";
-import { generateAiaFile } from "./aia-generator";
+import { generateAiaFile, saveConfiguration, loadConfiguration } from "./aia-generator";
 import { log } from "./vite";
 
 const router = express.Router();
@@ -28,6 +28,69 @@ router.post("/api/validate", async (req: Request, res: Response) => {
   }
 });
 
+// Save configuration endpoint
+router.post("/api/save-config", async (req: Request, res: Response) => {
+  try {
+    const { userId, apiKey, cseId } = req.body;
+    
+    if (!userId || !apiKey || !cseId) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required configuration fields"
+      });
+    }
+
+    const saved = saveConfiguration(userId, apiKey, cseId);
+    
+    if (saved) {
+      log(`[INFO] Configuration saved for user: ${userId}`);
+      res.json({
+        success: true,
+        message: "Configuration saved successfully"
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: "Failed to save configuration"
+      });
+    }
+  } catch (error: any) {
+    log(`[ERROR] Configuration save failed: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: "Failed to save configuration",
+      error: error.message
+    });
+  }
+});
+
+// Load configuration endpoint
+router.get("/api/load-config", async (req: Request, res: Response) => {
+  try {
+    const config = loadConfiguration();
+    
+    if (config) {
+      log(`[INFO] Configuration loaded for user: ${config.userId}`);
+      res.json({
+        success: true,
+        data: config
+      });
+    } else {
+      res.json({
+        success: false,
+        message: "No saved configuration found"
+      });
+    }
+  } catch (error: any) {
+    log(`[ERROR] Configuration load failed: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: "Failed to load configuration",
+      error: error.message
+    });
+  }
+});
+
 // AIA generation endpoint
 router.post("/api/generate", upload.array('extensions'), async (req: Request, res: Response) => {
   try {
@@ -35,6 +98,11 @@ router.post("/api/generate", upload.array('extensions'), async (req: Request, re
 
     const validatedData = generateAiaRequestSchema.parse(req.body);
     const extensionFiles = req.files as Express.Multer.File[] || [];
+
+    // Save configuration if requested
+    if (validatedData.saveConfig) {
+      saveConfiguration(validatedData.userId, validatedData.apiKey, validatedData.cseId);
+    }
 
     // Generate the AIA file using the proper generator
     const aiaBuffer = await generateAiaFile(validatedData, extensionFiles);

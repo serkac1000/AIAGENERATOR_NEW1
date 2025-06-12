@@ -41,6 +41,31 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
   const [detectedFeatures, setDetectedFeatures] = useState<string[]>([]);
   const { toast } = useToast();
 
+  // Load saved configuration on component mount
+  useEffect(() => {
+    const loadSavedConfig = async () => {
+      try {
+        const response = await fetch('/api/load-config');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          form.setValue('userId', result.data.userId || '');
+          form.setValue('apiKey', result.data.apiKey || '');
+          form.setValue('cseId', result.data.cseId || '');
+          
+          toast({
+            title: "Configuration Loaded",
+            description: "Previous settings have been restored.",
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load saved configuration:', error);
+      }
+    };
+
+    loadSavedConfig();
+  }, [form, toast]);
+
   const form = useForm<GenerateAiaRequest>({
     resolver: zodResolver(generateAiaRequestSchema),
     defaultValues: {
@@ -223,89 +248,26 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
       const timestamp = new Date().toISOString();
       console.error(`[${timestamp}] AIA Generation Error:`, error);
 
-      // Log request details for debugging
-      const formData = form.getValues();
-      console.error(`[${timestamp}] Request data:`, {
-        projectName: formData.projectName,
-        userId: formData.userId,
-        hasApiKey: !!formData.apiKey,
-        hasCseId: !!formData.cseId,
-        requirementsLength: formData.requirements?.length || 0,
-        extensionsCount: formData.extensions?.length || 0
-      });
+      // Enhanced error message handling with null checks
+      const errorMessage = error?.message || 'Unknown error occurred';
+      onStatusMessage(`❌ Error details: ${errorMessage}`, "error");
+      console.error(`[${timestamp}] Error message:`, errorMessage);
 
-      // Enhanced error message handling
-      if (error.message) {
-        onStatusMessage(`❌ Error details: ${error.message}`, "error");
-        console.error(`[${timestamp}] Error message:`, error.message);
-      }
-
-      // Network/fetch specific errors
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      // Check for network errors
+      if (errorMessage.toLowerCase().includes('fetch') || errorMessage.toLowerCase().includes('network')) {
         onStatusMessage("❌ Network error: Unable to connect to server", "error");
         onStatusMessage("💡 Check if the server is running and accessible", "warning");
         console.error(`[${timestamp}] Network/fetch error detected`);
       }
 
-      // Server response errors
-      try {
-        if (error.response) {
-          const errorData = error.response.data || error.response;
-          console.error(`[${timestamp}] Server response:`, errorData);
-
-          if (typeof errorData === 'string') {
-            onStatusMessage(`❌ Server response: ${errorData}`, "error");
-          } else if (errorData.message) {
-            onStatusMessage(`❌ Server error: ${errorData.message}`, "error");
-          } else if (errorData.errors) {
-            // Handle validation errors
-            onStatusMessage("❌ Validation errors detected:", "error");
-            if (Array.isArray(errorData.errors)) {
-              errorData.errors.forEach((err: any, index: number) => {
-                onStatusMessage(`   ${index + 1}. ${err.message || err}`, "error");
-              });
-            } else {
-              Object.entries(errorData.errors).forEach(([field, messages]) => {
-                onStatusMessage(`   ${field}: ${messages}`, "error");
-              });
-            }
-          }
-
-          // Log HTTP status if available
-          if (error.response.status) {
-            onStatusMessage(`❌ HTTP Status: ${error.response.status}`, "error");
-            console.error(`[${timestamp}] HTTP Status:`, error.response.status);
-          }
-        }
-      } catch (parseError) {
-        console.error(`[${timestamp}] Error parsing server response:`, parseError);
-        onStatusMessage("❌ Unable to parse server error response", "error");
-      }
-
-      // Stack trace for development
-      if (error.stack) {
-        console.error(`[${timestamp}] Stack trace:`, error.stack);
-      }
-
-      // Additional debugging information
-      if (error.cause) {
-        console.error(`[${timestamp}] Error cause:`, error.cause);
-        onStatusMessage(`❌ Root cause: ${error.cause}`, "error");
-      }
-
-      // Browser/environment specific errors
-      if (navigator.onLine === false) {
-        onStatusMessage("❌ Network offline - check internet connection", "error");
-      }
-
       // Provide actionable feedback based on error type
-      if (error.message?.includes('API key')) {
+      if (errorMessage.includes('API key')) {
         onStatusMessage("💡 Suggestion: Verify your Google API key is valid and has Custom Search API enabled", "warning");
-      } else if (error.message?.includes('CSE ID')) {
+      } else if (errorMessage.includes('CSE ID')) {
         onStatusMessage("💡 Suggestion: Check your Custom Search Engine ID configuration", "warning");
-      } else if (error.message?.includes('validation')) {
+      } else if (errorMessage.includes('validation')) {
         onStatusMessage("💡 Suggestion: Review all required fields and ensure they meet the requirements", "warning");
-      } else if (error.message?.includes('timeout')) {
+      } else if (errorMessage.includes('timeout')) {
         onStatusMessage("💡 Suggestion: Request timed out, try reducing file sizes or check server status", "warning");
       } else {
         onStatusMessage("💡 Suggestion: Check all configuration fields and try again", "warning");
