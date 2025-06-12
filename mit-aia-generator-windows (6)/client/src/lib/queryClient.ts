@@ -7,21 +7,66 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest(
+export const apiRequest = async (
   method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  const res = await fetch(url, {
+  endpoint: string,
+  data?: unknown
+): Promise<Response> => {
+  const config: RequestInit = {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    headers: {
+      "Content-Type": "application/json",
+    },
     credentials: "include",
-  });
+  };
 
-  await throwIfResNotOk(res);
-  return res;
-}
+  if (data) {
+    config.body = JSON.stringify(data);
+  }
+
+  try {
+    const response = await fetch(endpoint, config);
+
+    if (!response.ok) {
+      // Try to get error details from response
+      const contentType = response.headers.get('content-type');
+      let errorMessage = `HTTP error! status: ${response.status}`;
+
+      if (contentType?.includes('application/json')) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          // If JSON parsing fails, use the default error message
+        }
+      } else if (contentType?.includes('text/html')) {
+        // Handle HTML error responses (like 404 pages)
+        errorMessage = `Server returned HTML instead of JSON. Endpoint ${endpoint} might not exist or server is not running properly.`;
+      } else {
+        try {
+          const textResponse = await response.text();
+          if (textResponse.length < 200) {
+            errorMessage = textResponse || errorMessage;
+          }
+        } catch {
+          // If text parsing fails, use the default error message
+        }
+      }
+
+      const error = new Error(errorMessage);
+      (error as any).status = response.status;
+      (error as any).response = response;
+      throw error;
+    }
+
+    return response;
+  } catch (error) {
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error('Unable to connect to server. Please check if the server is running.');
+    }
+    throw error;
+  }
+};
 
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {

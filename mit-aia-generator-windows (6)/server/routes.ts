@@ -4,21 +4,12 @@ import * as admZip from "adm-zip";
 import * as path from "path";
 import * as fs from "fs";
 import express from "express";
+import { generateAiaRequestSchema } from "@shared/schema";
 
 const router = Router();
 
-// Zod schema for validation
-const generateSchema = z.object({
-  projectName: z.string().min(1, "Project name is required"),
-  searchPrompt: z.string().min(1, "Search prompt is required"),
-  apiKey: z.string().min(1, "API key is required"),
-  cseId: z.string().min(1, "CSE ID is required"),
-  userId: z.string().min(1, "User ID is required"),
-  requirements: z.string().optional(),
-  extensions: z.array(z.string()).default([]),
-  saveConfig: z.boolean().default(false),
-  validateStrict: z.boolean().default(true),
-});
+// Use the shared schema for consistency
+const generateSchema = generateAiaRequestSchema;
 
 // Function to generate .aia file
 function generateAiaFile(searchPrompt: string, appName: string): string {
@@ -193,6 +184,59 @@ $JSON
 
 // Register routes
 export async function registerRoutes(app: express.Express) {
+  // Validation endpoint
+  router.post("/api/validate", async (req: Request, res: Response) => {
+    try {
+      console.log("Validation request received:", req.body);
+      
+      // Validate the request data
+      const validatedData = generateAiaRequestSchema.parse(req.body);
+      
+      // Perform additional validation checks
+      const validationResults = {
+        valid: true,
+        message: "Configuration is valid",
+        detectedFeatures: {
+          use_list_view: validatedData.requirements?.toLowerCase().includes('list view') || false,
+          play_sound: validatedData.requirements?.toLowerCase().includes('sound') || false,
+        },
+        warnings: [] as string[]
+      };
+
+      // Check for potential issues
+      if (!validatedData.apiKey || validatedData.apiKey.length < 30) {
+        validationResults.warnings.push("API key appears to be too short");
+      }
+      
+      if (!validatedData.cseId || validatedData.cseId.length < 10) {
+        validationResults.warnings.push("CSE ID appears to be too short");
+      }
+
+      console.log("Validation successful:", validationResults);
+      res.json(validationResults);
+      
+    } catch (error) {
+      console.error("Validation error:", error);
+      
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          valid: false,
+          message: "Validation failed",
+          errors: error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      } else {
+        res.status(500).json({
+          valid: false,
+          message: "Internal server error during validation",
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+  });
+
   router.post("/api/generate", async (req: Request, res: Response) => {
     try {
       const validatedData = generateSchema.parse(req.body);

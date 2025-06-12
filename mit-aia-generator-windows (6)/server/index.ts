@@ -50,35 +50,63 @@ try {
       execSync(`taskkill /PID ${pid} /F`);
       log(`Process ${pid} terminated.`);
     }
+  } catch (error) {
+    log(`No process found on port ${port}.`);
   }
-} catch (error) {
-  log(`No process found on port ${port}.`);
 }
 
 // Register routes before Vite to ensure API precedence
 (async () => {
-  await registerRoutes(app);
+  const PORT = process.env.PORT || 5000;
+  try {
+    // Add middleware for parsing JSON
+    app.use(express.json({ limit: '50mb' }));
+    app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-  // Error handling middleware
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    log(`[ERROR] ${status}: ${message}`);
-    res.status(status).json({ message });
-  });
+    // Add CORS headers for development
+    app.use((req, res, next) => {
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
 
-  // Create HTTP server
-  const server = createServer(app);
+      if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+      } else {
+        next();
+      }
+    });
 
-  // Vite setup for development (after API routes)
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    // Register API routes first
+    await registerRoutes(app);
+
+    // Vite setup for development (after API routes)
+    if (app.get("env") === "development") {
+      await setupVite(app);
+    } else {
+      serveStatic(app);
+    }
+
+    // Add error handling middleware
+    app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+      console.error('Server error:', error);
+      res.status(500).json({
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+      });
+    });
+
+    // Create HTTP server
+    const server = createServer(app);
+
+    server.listen(PORT, '0.0.0.0', () => {
+      log(`[INFO] Server running at http://0.0.0.0:${PORT}`);
+      log(`API endpoints available at:`);
+      log(`  POST /api/validate - Validate AIA configuration`);
+      log(`  POST /api/generate - Generate AIA file`);
+    });
+
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
   }
-
-  // Start server
-  server.listen(port, "127.0.0.1", () => {
-    log(`[INFO] Server running on http://127.0.0.1:${port}`);
-  });
 })();
