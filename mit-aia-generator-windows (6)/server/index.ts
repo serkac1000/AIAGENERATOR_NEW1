@@ -37,24 +37,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// Check port and terminate conflicting process
-const port = 4000;
-try {
-  const netstatOutput = execSync(`netstat -aon | findstr :${port}`).toString();
-  const lines = netstatOutput.split('\n').filter(line => line.includes(`:${port}`));
-  if (lines.length > 0) {
-    const pidMatch = lines[0].match(/\s+(\d+)\s*$/);
-    if (pidMatch) {
-      const pid = pidMatch[1];
-      log(`Port ${port} is in use by PID ${pid}. Terminating process...`);
-      execSync(`taskkill /PID ${pid} /F`);
-      log(`Process ${pid} terminated.`);
-    }
-  }
-} catch (error) {
-  log(`No process found on port ${port}.`);
-}
-
 // Register routes before Vite to ensure API precedence
 (async () => {
   const PORT = process.env.PORT || 5000;

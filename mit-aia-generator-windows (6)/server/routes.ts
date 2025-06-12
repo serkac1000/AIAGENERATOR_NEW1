@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
-import * as admZip from "adm-zip";
+import admZip from "adm-zip";
 import * as path from "path";
 import * as fs from "fs";
 import express from "express";
