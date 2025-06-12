@@ -146,7 +146,7 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
       'utf-8'
     );
 
-    // Generate Screen1.scm with proper component structure
+    // Generate Screen1.scm with proper component structure and all required properties
     const components = [
       {
         "$Name": "SearchBox",
@@ -167,7 +167,10 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
         "FontTypeface": "0",
         "TextAlignment": "0",
         "TextColor": "&HFF000000",
-        "Visible": true
+        "Visible": true,
+        "ReadOnly": false,
+        "NumbersOnly": false,
+        "MultiLine": false
       },
       {
         "$Name": "SearchButton",
@@ -205,7 +208,8 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
         "Url": "",
         "UsesLocation": false,
         "Visible": false,
-        "Width": "-2"
+        "Width": "-2",
+        "RequestHeaders": []
       }
     ];
 
@@ -232,7 +236,9 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
         "ShowFilterBar": false,
         "TextColor": "&HFF000000",
         "TextSize": 22,
-        "Visible": true
+        "Visible": true,
+        "ImageWidth": 200,
+        "ImageHeight": 200
       });
     } else {
       components.push({
@@ -241,7 +247,7 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
         "$Version": "6",
         "Uuid": generateUuid(),
         "Text": "Search results will appear here",
-        "FontSize": "16",
+        "FontSize": 16,
         "TextAlignment": "1",
         "Width": "-1100",
         "Height": "-1050",
@@ -323,6 +329,11 @@ versionname=1.0${externalComps ? `\nexternal_comps=${externalComps}` : ''}
         "TitleVisible": true,
         "VersionCode": 1,
         "VersionName": "1.0",
+        "Theme": "AppTheme.Light.DarkActionBar",
+        "PrimaryColor": "&HFF3F51B5",
+        "PrimaryColorDark": "&HFF303F9F",
+        "AccentColor": "&HFFFF4081",
+        "DefaultFileScope": "App",
         "$Components": components
       }
     };
