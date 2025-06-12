@@ -142,11 +142,29 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
     },
     onMutate: () => {
       onClearStatus();
-      onStatusMessage("Starting AIA file generation...", "info");
-      onStatusMessage("Validating MIT App Inventor 2 specifications...", "info");
-      onStatusMessage("Processing project configuration...", "info");
-      onStatusMessage("Generating component structure...", "info");
-      onStatusMessage("Creating block definitions...", "info");
+      const timestamp = new Date().toISOString();
+      const formData = form.getValues();
+      
+      onStatusMessage("🚀 Starting AIA file generation...", "info");
+      
+      // Log configuration details for debugging
+      console.log(`[${timestamp}] AIA Generation Started with config:`, {
+        projectName: formData.projectName,
+        userId: formData.userId,
+        searchPrompt: formData.searchPrompt?.substring(0, 50) + '...',
+        hasApiKey: !!formData.apiKey,
+        hasCseId: !!formData.cseId,
+        requirementsLength: formData.requirements?.length || 0,
+        extensionsCount: formData.extensions?.length || 0,
+        saveConfig: formData.saveConfig,
+        validateStrict: formData.validateStrict
+      });
+      
+      onStatusMessage("🔍 Validating MIT App Inventor 2 specifications...", "info");
+      onStatusMessage("⚙️ Processing project configuration...", "info");
+      onStatusMessage("🏗️ Generating component structure...", "info");
+      onStatusMessage("🧩 Creating block definitions...", "info");
+      onStatusMessage("📦 Preparing file archive...", "info");
     },
     onSuccess: async (response) => {
       const blob = await response.blob();
@@ -166,32 +184,103 @@ export function AiaForm({ onStatusMessage, onClearStatus }: AiaFormProps) {
       });
     },
     onError: (error: any) => {
-      onStatusMessage("Generation failed", "error");
+      onStatusMessage("❌ Generation failed", "error");
       
-      // Log detailed error information
-      console.error("Generation error details:", error);
+      // Log detailed error information with timestamps
+      const timestamp = new Date().toISOString();
+      console.error(`[${timestamp}] AIA Generation Error:`, error);
       
+      // Log request details for debugging
+      const formData = form.getValues();
+      console.error(`[${timestamp}] Request data:`, {
+        projectName: formData.projectName,
+        userId: formData.userId,
+        hasApiKey: !!formData.apiKey,
+        hasCseId: !!formData.cseId,
+        requirementsLength: formData.requirements?.length || 0,
+        extensionsCount: formData.extensions?.length || 0
+      });
+      
+      // Enhanced error message handling
       if (error.message) {
-        onStatusMessage(`Error: ${error.message}`, "error");
+        onStatusMessage(`❌ Error details: ${error.message}`, "error");
+        console.error(`[${timestamp}] Error message:`, error.message);
       }
       
-      // Try to parse and display more specific error details
+      // Network/fetch specific errors
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        onStatusMessage("❌ Network error: Unable to connect to server", "error");
+        onStatusMessage("💡 Check if the server is running and accessible", "warning");
+        console.error(`[${timestamp}] Network/fetch error detected`);
+      }
+      
+      // Server response errors
       try {
         if (error.response) {
           const errorData = error.response.data || error.response;
+          console.error(`[${timestamp}] Server response:`, errorData);
+          
           if (typeof errorData === 'string') {
-            onStatusMessage(`Server response: ${errorData}`, "error");
+            onStatusMessage(`❌ Server response: ${errorData}`, "error");
           } else if (errorData.message) {
-            onStatusMessage(`Server error: ${errorData.message}`, "error");
+            onStatusMessage(`❌ Server error: ${errorData.message}`, "error");
+          } else if (errorData.errors) {
+            // Handle validation errors
+            onStatusMessage("❌ Validation errors detected:", "error");
+            if (Array.isArray(errorData.errors)) {
+              errorData.errors.forEach((err: any, index: number) => {
+                onStatusMessage(`   ${index + 1}. ${err.message || err}`, "error");
+              });
+            } else {
+              Object.entries(errorData.errors).forEach(([field, messages]) => {
+                onStatusMessage(`   ${field}: ${messages}`, "error");
+              });
+            }
+          }
+          
+          // Log HTTP status if available
+          if (error.response.status) {
+            onStatusMessage(`❌ HTTP Status: ${error.response.status}`, "error");
+            console.error(`[${timestamp}] HTTP Status:`, error.response.status);
           }
         }
       } catch (parseError) {
-        console.error("Error parsing error response:", parseError);
+        console.error(`[${timestamp}] Error parsing server response:`, parseError);
+        onStatusMessage("❌ Unable to parse server error response", "error");
+      }
+      
+      // Stack trace for development
+      if (error.stack) {
+        console.error(`[${timestamp}] Stack trace:`, error.stack);
+      }
+      
+      // Additional debugging information
+      if (error.cause) {
+        console.error(`[${timestamp}] Error cause:`, error.cause);
+        onStatusMessage(`❌ Root cause: ${error.cause}`, "error");
+      }
+      
+      // Browser/environment specific errors
+      if (navigator.onLine === false) {
+        onStatusMessage("❌ Network offline - check internet connection", "error");
+      }
+      
+      // Provide actionable feedback based on error type
+      if (error.message?.includes('API key')) {
+        onStatusMessage("💡 Suggestion: Verify your Google API key is valid and has Custom Search API enabled", "warning");
+      } else if (error.message?.includes('CSE ID')) {
+        onStatusMessage("💡 Suggestion: Check your Custom Search Engine ID configuration", "warning");
+      } else if (error.message?.includes('validation')) {
+        onStatusMessage("💡 Suggestion: Review all required fields and ensure they meet the requirements", "warning");
+      } else if (error.message?.includes('timeout')) {
+        onStatusMessage("💡 Suggestion: Request timed out, try reducing file sizes or check server status", "warning");
+      } else {
+        onStatusMessage("💡 Suggestion: Check all configuration fields and try again", "warning");
       }
       
       toast({
-        title: "Generation Failed",
-        description: "Please check your configuration and try again.",
+        title: "AIA Generation Failed",
+        description: "Detailed error information has been logged. Check the status panel for more details.",
         variant: "destructive",
       });
     },
