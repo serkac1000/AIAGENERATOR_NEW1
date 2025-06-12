@@ -38,6 +38,9 @@ export async function generateAiaFile(
     requirements = '',
   } = request;
 
+  console.log('Starting AIA generation for project:', projectName);
+  console.log('Extension files count:', extensionFiles.length);
+
   const features = parseRequirements(requirements);
   const tempDir = path.join(process.cwd(), 'temp', `${projectName}_${Date.now()}`);
   
@@ -58,7 +61,7 @@ export async function generateAiaFile(
     for (const ext of extensionFiles) {
       const extName = path.basename(ext.originalname);
       const destPath = path.join(externalCompsDir, extName);
-      await fs.promises.copyFile(ext.path, destPath);
+      await fs.promises.writeFile(destPath, ext.buffer);
       extensionNames.push(path.parse(extName).name);
     }
 
@@ -303,23 +306,60 @@ external_comps=${externalComps}
 
     // Create ZIP archive
     return new Promise((resolve, reject) => {
-      const archive = archiver('zip', { zlib: { level: 9 } });
+      const archive = archiver('zip', { 
+        zlib: { level: 1 }, // Use faster compression
+        forceLocalTime: true 
+      });
       const buffers: Buffer[] = [];
 
       archive.on('data', (chunk) => buffers.push(chunk));
-      archive.on('end', () => resolve(Buffer.concat(buffers)));
-      archive.on('error', reject);
+      archive.on('end', () => {
+        console.log('Archive finalized, total size:', Buffer.concat(buffers).length);
+        resolve(Buffer.concat(buffers));
+      });
+      archive.on('error', (err) => {
+        console.error('Archive error:', err);
+        reject(err);
+      });
+      archive.on('warning', (warn) => {
+        console.warn('Archive warning:', warn);
+      });
 
-      archive.directory(tempDir, false);
-      archive.finalize();
+      // Add files individually instead of directory
+      const addFilesRecursively = async (dir: string, prefix = '') => {
+        const items = await fs.promises.readdir(dir, { withFileTypes: true });
+        for (const item of items) {
+          const fullPath = path.join(dir, item.name);
+          const archivePath = prefix ? `${prefix}/${item.name}` : item.name;
+          
+          if (item.isDirectory()) {
+            await addFilesRecursively(fullPath, archivePath);
+          } else {
+            const fileContent = await fs.promises.readFile(fullPath);
+            archive.append(fileContent, { name: archivePath });
+          }
+        }
+      };
+
+      addFilesRecursively(tempDir)
+        .then(() => {
+          console.log('All files added to archive, finalizing...');
+          archive.finalize();
+        })
+        .catch(reject);
     });
 
   } finally {
-    // Cleanup temp directory
-    try {
-      await fs.promises.rm(tempDir, { recursive: true, force: true });
-    } catch (error) {
-      console.warn('Failed to cleanup temp directory:', error);
-    }
+    // Cleanup temp directory with a slight delay to ensure archiver is done
+    setTimeout(async () => {
+      try {
+        if (await fs.promises.access(tempDir).then(() => true).catch(() => false)) {
+          await fs.promises.rm(tempDir, { recursive: true, force: true });
+          console.log('Temp directory cleaned up:', tempDir);
+        }
+      } catch (error) {
+        console.warn('Failed to cleanup temp directory:', error);
+      }
+    }, 1000);
   }
 }
